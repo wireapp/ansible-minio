@@ -2,25 +2,47 @@
 - name: Compose the Minio server download base url
   set_fact:
     _minio_server_download_base_url: "https://dl.minio.io/server/minio/release/linux-{{ go_arch }}"
+  tags:
+    - download
 
 - name: Compose the Minio server download url with lastest release
   set_fact:
     _minio_server_download_url: "{{ _minio_server_download_base_url }}/minio"
   when: minio_server_release | length == 0
+  tags:
+    - download
 
 - name: "Compose the Minio server download url with release {{ minio_server_release }}"
   set_fact:
     _minio_server_download_url: "{{ _minio_server_download_base_url }}/archive/minio.{{ minio_server_release }}"
   when: minio_server_release | length > 0
+  tags:
+    - download
 
 - name: "Get the Minio server checksum for {{ go_arch }} architecture"
   set_fact:
     _minio_server_checksum: "{{ lookup('url', _minio_server_download_url + '.sha256sum').split(' ')[0] }}"
+  tags:
+    - download
+
+- name: "Download the Minio server checksum file for {{ go_arch }} architecture"
+  get_url:
+    url: "{{ _minio_server_download_url }}.sha256sum"
+    dest: "{{ minio_server_bin }}.sha256sum"
+  register: _download_server_checksum
+  until: _download_server_checksum
+  retries: 5
+  delay: 2
+  tags:
+    - never
+    - download
 
 - name: Create Minio group
   group:
     name: "{{ minio_group }}"
     state: present
+  tags:
+    - install
 
 - name: Create Minio user
   user:
@@ -28,6 +50,8 @@
     group: "{{ minio_group }}"
     system: "yes"
     shell: "/usr/sbin/nologin"
+  tags:
+    - install
 
 - name: Create the Minio data storage directories
   file:
@@ -38,20 +62,32 @@
     mode: 0750
   when: minio_server_make_datadirs
   with_items: "{{ minio_server_datadirs }}"
+  tags:
+    - install
 
 - name: Download the Minio server
   get_url:
     url: "{{ _minio_server_download_url }}"
     dest: "{{ minio_server_bin }}"
-    owner: "root"
-    group: "root"
-    mode: 0755
     checksum: "sha256:{{ _minio_server_checksum }}"
   register: _download_server
   until: _download_server is succeeded
   retries: 5
   delay: 2
   notify: restart minio
+  # TODO [gj]: what about the notifier?
+  tags:
+    - download
+
+- name: Set attributes on Minio server binary
+  file:
+    path: "{{ minio_server_bin }}"
+    owner: "root"
+    group: "root"
+    mode: 0755
+  notify: restart minio
+  tags:
+    - install
 
 - name: Generate the Minio server envfile
   template:
@@ -61,6 +97,8 @@
     group: "{{ minio_group }}"
     mode: 0640
   notify: restart minio
+  tags:
+    - install
 
 - name: Create the Minio server systemd config
   template:
@@ -72,6 +110,8 @@
   notify:
     - reload minio systemd
     - restart minio
+  tags:
+    - install
 
 - name: Create the Minio server init.d config
   template:
@@ -82,9 +122,13 @@
     mode: 0750
   when: ansible_service_mgr != "systemd"
   notify: restart minio
+  tags:
+    - install
 
 - name: Enable and start the Minio service
   service:
     name: minio
     state: started
     enabled: true
+  tags:
+    - install

@@ -4,8 +4,12 @@
   systemd:
     name: minio
     daemon_reload: True
+  tags:
+    - install
 
 - name: restart minio
   service:
     name: minio
     state: restarted
+  tags:
+    - install
