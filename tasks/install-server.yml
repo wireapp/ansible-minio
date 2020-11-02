@@ -1,13 +1,5 @@
 ---
 
-- name: Compose the Minio server download url
-  set_fact:
-    _minio_server_download_url: "https://dl.minio.io/server/minio/release/linux-{{ go_arch_map[ansible_architecture] | default(ansible_architecture) }}/minio"
-
-- name: "Get the Minio server checksum for {{ go_arch_map[ansible_architecture] | default(ansible_architecture) }} architecture"
-  set_fact:
-    _minio_server_checksum: "{{ lookup('url', _minio_server_download_url + '.sha256sum').split(' ')[0] }}"
-
 - name: Create Minio group
   group:
     name: "{{ minio_group }}"
@@ -35,12 +27,12 @@
 
 - name: Download the Minio server
   get_url:
-    url: "{{ _minio_server_download_url }}"
+    url: "{{ minio_server_download_url }}"
     dest: "{{ minio_server_bin }}"
     owner: "root"
     group: "root"
     mode: 0755
-    checksum: "sha256:{{ _minio_server_checksum }}"
+    checksum: "{{ minio_server_checksum }}"
   register: _download_server
   until: _download_server is succeeded
   retries: 5
