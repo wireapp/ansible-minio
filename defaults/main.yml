@@ -38,6 +38,16 @@ minio_client_artifact_url: ""
 minio_server_artifact_checksum: ""
 minio_client_artifact_checksum: ""
 
+# List of "sha256:<sha256sum>" strings.
+# If set to a non-empty list then upgrading a previous binary will only succeed if its sha256sum matches
+# any of the provided checksums.
+# If set to [] then this check is skipped.
+#
+# Example: minio_server_upgrade_from_checksums : [ "sha256:2c7e6774a9befbba6a126791f363550f8f14e34008e100d0e0e57e2ad9b2ab8c" ]
+minio_server_upgrade_from_checksums: []
+
+minio_client_upgrade_from_checksums: []
+
 # Runtime user and group for the Minio server service
 minio_user: minio
 minio_group: minio

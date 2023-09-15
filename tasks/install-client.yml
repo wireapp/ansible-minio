@@ -28,6 +28,22 @@
     _minio_client_checksum: "{{ minio_client_artifact_checksum }}"
   when: minio_client_artifact_checksum | length > 0
 
+- name: Check previously installed client binary
+  stat:
+    path: "{{ minio_client_bin }}"
+    checksum_algorithm: sha256
+    get_checksum: true
+  register: _installed_client
+  tags: dev
+
+- name: Check installed client binary
+  assert:
+    that:
+      - "'sha256:' + _installed_client.stat.checksum in minio_client_upgrade_from_checksums"
+    fail_msg: Installed client binary checksum sha256:{{_installed_client.stat.checksum}} does not match any checksum specified in minio_client_upgrade_from_checksums
+    success_msg: Installed client binary may be upgraded from.
+  when: (_installed_client.stat.exists and minio_client_upgrade_from_checksums | length > 0)
+
 - name: Download the Minio client
   get_url:
     url: "{{ _minio_client_download_url }}"
