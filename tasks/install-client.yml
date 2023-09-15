@@ -28,7 +28,7 @@
     _minio_client_checksum: "{{ minio_client_artifact_checksum }}"
   when: minio_client_artifact_checksum | length > 0
 
-- name: Check previously installed client binary
+- name: Stat existing client binary
   stat:
     path: "{{ minio_client_bin }}"
     checksum_algorithm: sha256
@@ -36,7 +36,7 @@
   register: _installed_client
   tags: dev
 
-- name: Check installed client binary
+- name: Check existing client binary
   assert:
     that:
       - "'sha256:' + _installed_client.stat.checksum in minio_client_upgrade_from_checksums"

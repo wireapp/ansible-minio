@@ -27,7 +27,7 @@
     _minio_server_checksum: "{{ minio_server_artifact_checksum }}"
   when: minio_server_artifact_checksum | length > 0
 
-- name: Check previously installed server binary
+- name: Stat existing server binary
   stat:
     path: "{{ minio_server_bin }}"
     checksum_algorithm: sha256
@@ -35,7 +35,7 @@
   register: _installed_server
   tags: dev
 
-- name: Check installed server binary
+- name: Check existing server binary
   assert:
     that:
       - "'sha256:' + _installed_server.stat.checksum in minio_server_upgrade_from_checksums"
