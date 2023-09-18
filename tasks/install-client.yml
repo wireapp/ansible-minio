@@ -39,7 +39,7 @@
 - name: Check existing client binary
   assert:
     that:
-      - "'sha256:' + _installed_client.stat.checksum in minio_client_upgrade_from_checksums"
+      - "'sha256:' + _installed_client.stat.checksum in (minio_client_upgrade_from_checksums + [minio_client_artifact_checksum])"
     fail_msg: Installed client binary checksum sha256:{{_installed_client.stat.checksum}} does not match any checksum specified in minio_client_upgrade_from_checksums
     success_msg: Installed client binary may be upgraded from.
   when: (_installed_client.stat.exists and minio_client_upgrade_from_checksums | length > 0)

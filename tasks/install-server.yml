@@ -86,7 +86,7 @@
 - name: Check existing server binary
   assert:
     that:
-      - "'sha256:' + _installed_server.stat.checksum in minio_server_upgrade_from_checksums"
+      - "'sha256:' + _installed_server.stat.checksum in (minio_server_upgrade_from_checksums + [minio_server_artifact_checksum])"
     fail_msg: Installed server binary checksum sha256:{{_installed_server.stat.checksum}} does not match any checksum specified in minio_server_upgrade_from_checksums
     success_msg: Installed servery binary may be upgraded from.
   when: (_installed_server.stat.exists and minio_server_upgrade_from_checksums | length > 0)
