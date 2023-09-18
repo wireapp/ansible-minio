@@ -1,4 +1,52 @@
 ---
+
+- name: Determine format files of existing deployments
+  set_fact:
+    _format_files: >-
+      [
+        {%- for layout in minio_layouts -%}
+          "{{ minio_layouts[layout]['server_datadir'] | default('/var/lib/minio-' + layout) }}/.minio.sys/format.json"
+          ,
+        {%- endfor -%}
+      ]
+
+- name: Stat format files·
+  stat:
+     path: "{{item}}"
+  with_items: "{{_format_files}}"
+  register: _format_stats
+
+- name: Read format files
+  slurp:
+    src: "{{item.stat.path}}"
+  when:
+    - item.stat.exists
+  with_items: "{{_format_stats.results}}"
+  register: _format_contents
+  loop_control:
+     label: "{{ item.item }}"
+
+- name: Read format
+  set_fact:
+    _format: >-
+      [
+        {%- for x in _format_contents.results if x.item.stat.exists -%}
+        {
+          "file": "{{x.item.stat.path}}",
+          "format": "{{ (x.content | b64decode | from_json).format  }}"
+        }
+        ,
+        {%- endfor -%}
+      ]
+
+- name: Assert xl format
+  assert:
+    that: "{{item.format == 'xl'}}"
+    fail_msg: "{{item.file}} is not in 'xl' format ({{item.format}}). Manual upgrade needed."
+  with_items: "{{_format}}"
+  loop_control:
+     label: "{{ item.file }}"
+
 - name: "Set the Minio server download url to default"
   set_fact:
     _minio_server_download_url: "{{ minio_default_server_artifact_url }}"
@@ -26,6 +74,22 @@
   set_fact:
     _minio_server_checksum: "{{ minio_server_artifact_checksum }}"
   when: minio_server_artifact_checksum | length > 0
+
+- name: Stat existing server binary
+  stat:
+    path: "{{ minio_server_bin }}"
+    checksum_algorithm: sha256
+    get_checksum: true
+  register: _installed_server
+  tags: dev
+
+- name: Check existing server binary
+  assert:
+    that:
+      - "'sha256:' + _installed_server.stat.checksum in (minio_server_upgrade_from_checksums + [minio_server_artifact_checksum])"
+    fail_msg: Installed server binary checksum sha256:{{_installed_server.stat.checksum}} does not match any checksum specified in minio_server_upgrade_from_checksums
+    success_msg: Installed servery binary may be upgraded from.
+  when: (_installed_server.stat.exists and minio_server_upgrade_from_checksums | length > 0)
 
 - name: "Set service name"
   set_fact:
